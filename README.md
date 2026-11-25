@@ -1,23 +1,12 @@
-# Gmail Temp Mail Pro
-Painel privado de aliases Gmail reutilizáveis. Não cria contas Google independentes.
+# Gmail Temp Mail Pro V2
+Painel privado, Flask, Gmail API somente leitura, PostgreSQL Aiven. Não requer CMD.
 
-## Google Cloud
-1. Crie um projeto em https://console.cloud.google.com/ e habilite Gmail API.
-2. Configure a tela de consentimento OAuth (Google Auth Platform). Adicione sua conta Gmail como usuário de teste, se aplicável.
-3. Crie um cliente OAuth do tipo aplicativo para computador. Baixe o JSON como credentials.json nesta pasta. Nunca envie esse arquivo ao GitHub.
-4. No Windows, instale Python 3.11 ou superior. Abra o terminal nesta pasta e execute:
-   `python -m pip install -r requirements.txt`
-   `python oauth_setup.py`
-5. Autorize a conta Gmail exclusiva do projeto. Guarde os três valores exibidos em segredo. Em modo Testing, refresh tokens de aplicativos externos com escopo Gmail normalmente expiram em 7 dias. Consulte os requisitos de publicação/verificação do Google antes de uso duradouro.
+1. Extraia o ZIP e envie os arquivos para um repositório privado GitHub.
+2. No Aiven crie PostgreSQL e copie Service URI com sslmode=require.
+3. No Render crie um Web Service Python conectado ao repositório. Build: `pip install -r requirements.txt`. Start: `gunicorn app:app --workers 1 --timeout 120`. Health check: `/health`.
+4. Em Environment adicione DATABASE_URL (URI Aiven), ADMIN_PASSWORD (senha forte), GMAIL_ADDRESS (Gmail principal), GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET (cliente OAuth Web), SECRET_KEY (valor aleatório longo e permanente), PUBLIC_URL (URL HTTPS do serviço sem barra final). Não publique segredos no GitHub. Também pode usar Blueprint, sem banco Render.
+5. No Google Cloud ative Gmail API, configure consentimento e escopo https://www.googleapis.com/auth/gmail.readonly, adicione seu Gmail como usuário de teste se necessário. No cliente Web adicione URI de redirecionamento exatamente PUBLIC_URL + /oauth/callback. Exemplo https://gmail-temp-mail-pro.onrender.com/oauth/callback (substitua pela URL real).
+6. Abra o painel, entre com ADMIN_PASSWORD e clique Conectar / reconectar com Google. Autorize a conta configurada. O token é criptografado no Aiven usando SECRET_KEY; não altere essa chave sem reconectar.
+7. Gere aliases aleatórios ou personalizados. Para recuperar um endereço antigo, selecione no histórico ou digite o mesmo sufixo. Arquivar não impede recebimento no Gmail.
 
-## GitHub e Render
-1. Crie um repositório privado no GitHub e envie os arquivos do projeto, exceto credentials.json e quaisquer segredos.
-2. No Render (https://dashboard.render.com/), escolha New > Blueprint, conecte o repositório e revise os planos e custos antes de confirmar. O render.yaml cria serviço web e PostgreSQL; não presume gratuidade.
-3. Preencha ADMIN_PASSWORD (senha forte e exclusiva), GMAIL_ADDRESS (conta real, sem alias), GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET e GMAIL_REFRESH_TOKEN. SECRET_KEY e DATABASE_URL são configurados pelo Blueprint.
-4. Abra a URL fornecida pelo Render e entre com sua senha.
-
-## Uso
-Digite um alias ou deixe vazio para gerar aleatoriamente. Para recuperar um endereço, digite novamente o mesmo alias ou selecione o histórico. Arquivar não bloqueia recebimento. O botão Atualizar consulta até 50 mensagens recentes correspondentes; a mensagem completa é exibida como texto, inclusive HTML bruto quando não houver versão texto. Não há envio de e-mails, exclusão no Gmail ou armazenamento de conteúdo no banco. Mensagens sem o alias nos cabeçalhos consultados podem não aparecer. Sites podem rejeitar aliases com +.
-
-## Segurança e operação
-Use apenas como painel privado de um administrador. Não compartilhe a senha. Não exponha tokens. Mantenha backups do PostgreSQL; planos de banco podem expirar. Se a autorização for revogada ou expirar, execute novamente oauth_setup.py e atualize o token no Render. Não há limitação de tentativas de login implementada; para exposição pública, adicione proteção de acesso/rate limiting antes de usar. A aplicação não foi testada contra uma conta Gmail real ou implantação Render.
+Limites: Gmail aliases com + não são contas independentes; alguns sites rejeitam. Consulta manual até 50 resultados, filtrando cabeçalhos de destinatário; mensagens sem destinatário visível podem não aparecer. HTML é mostrado como texto, sem executar código. Mensagens permanecem no Gmail, não no banco. OAuth externo em teste pode expirar em 7 dias; reconecte quando necessário. Publicação OAuth pode exigir verificação Google. Painel de administrador único, sem limitação de tentativas de login; mantenha privado e use senha forte. Não testado com credenciais reais nem implantado. Não altere GMAIL_ADDRESS após cadastrar aliases sem avaliar o histórico.
